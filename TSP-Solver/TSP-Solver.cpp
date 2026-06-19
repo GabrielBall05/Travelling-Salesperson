@@ -266,7 +266,9 @@ TSPResult solveTSPBruteForce(const vector<vector<double>>& adjMat) {
         currentCost += adjMat[currentCity][0];
         if (currentCost < minLength) {
             minLength = currentCost;
-            bestPath = cities;
+            bestPath.clear();
+            bestPath.push_back(0);
+            bestPath.insert(bestPath.end(), cities.begin(), cities.end());
         }
     } while (next_permutation(cities.begin(), cities.end()));
     return TSPResult{ minLength, bestPath };
