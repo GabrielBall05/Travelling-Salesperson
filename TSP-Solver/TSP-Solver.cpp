@@ -3,6 +3,7 @@
 //Desc: Travelling Salesperson Solver
 
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <queue>
 #include <random>
@@ -83,7 +84,6 @@ vector<vector<double>> generateAdjacencyMatrix(const vector<City>& cities) {
 }
 
 //Returns the bound for the given node
-//double computeBound(const vector<vector<double>>& adjMat, int curCity, const vector<int>& unvisitedCities, double costSoFar) {
 double computeBound(const vector<vector<double>>& adjMat, const Node& curNode) {
     double estimatedCost = curNode.curCost; //Initialize to the cost so far
 
@@ -194,6 +194,7 @@ TSPResult solveTSP(const vector<vector<double>>& adjMat) {
     return TSPResult{ minLength, bestPath };
 }
 
+//Print Results
 void printResults(TSPResult result, string label) {
     cout << label << "\n";
     cout << "Minimum Cost: " << result.minLength << "\n";
@@ -204,6 +205,30 @@ void printResults(TSPResult result, string label) {
     cout << "Duration: " << result.duration.count() << " microseconds\n";
 }
 
+//Print coordinates for cities in a format friendly to desmos.com/calculator
+void printCityCoordinates(const vector<City>& cities) {
+    for (const City& city : cities)
+        cout << "(" << city.x << "," << city.y << ")\n";
+}
+
+//Print Adjacency Matrix
+void printAdjacencyMatrix(const vector<vector<double>>& adjMat) {
+    int n = adjMat.size();
+    const int cellWidth = 5;
+    cout << "\nAdjacency Matrix(Rounded to ints) :\n      ";
+    for (int j = 0; j < n; j++)
+        cout << setw(cellWidth) << j << "  ";
+    cout << "\n     +" << string(n * (cellWidth + 2) - 1, '-') << "+\n";
+    for (int i = 0; i < n; i++) {
+        cout << setw(4) << i << " |";
+        for (int j = 0; j < n; j++) {
+            int displayDist = (i == j) ? 0 : static_cast<int>(adjMat[i][j] + 0.5);
+            cout << setw(cellWidth) << displayDist << " |";
+        }
+        cout << "\n     +" << string(n * (cellWidth + 2) - 1, '-') << "+\n";
+    }
+}
+
 int main() {
     //Get n from user
     cout << "Number of vertices/cities: ";
@@ -211,7 +236,10 @@ int main() {
     cin >> n;
 
     //Generate graph and adjacency matrix
-    vector<vector<double>> adjMat = generateAdjacencyMatrix(generateCities(n));
+    vector<City> cities = generateCities(n);
+    vector<vector<double>> adjMat = generateAdjacencyMatrix(cities);
+    printCityCoordinates(cities);
+    printAdjacencyMatrix(adjMat);
 
     //BRANCH AND BOUND
     //Start timer
@@ -229,7 +257,7 @@ int main() {
     printResults(bbResult, "--- Branch and Bound Results ---");
 
 
-    //BRUTE FORCE
+    //BRUTE FORCE to verify correctness
     //Start timer
     auto bfStart = chrono::high_resolution_clock::now();
 
