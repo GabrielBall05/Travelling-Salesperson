@@ -9,7 +9,6 @@
 #include <cmath>
 #include <numeric>
 #include <algorithm>
-#include <chrono>
 
 using namespace std;
 
@@ -37,7 +36,6 @@ struct Node {
 struct TSPResult {
     double minLength;
     vector<int> bestPath;
-    chrono::microseconds duration;
 };
 
 TSPResult solveTSPBruteForce(const vector<vector<double>>& adjMat); //For verifying B&B result
@@ -191,6 +189,7 @@ TSPResult solveTSP(const vector<vector<double>>& adjMat) {
         }
     }
 
+
     return TSPResult{ minLength, bestPath };
 }
 
@@ -201,7 +200,6 @@ void printResults(TSPResult result, string label) {
     for (int city : result.bestPath)
         cout << city << " -> ";
     cout << "0\n";
-    cout << "Duration: " << result.duration.count() << " microseconds\n";
 }
 
 int main() {
@@ -213,61 +211,54 @@ int main() {
     //Generate graph and adjacency matrix
     vector<vector<double>> adjMat = generateAdjacencyMatrix(generateCities(n));
 
-    //BRANCH AND BOUND
-    //Start timer
-    auto bbStart = chrono::high_resolution_clock::now();
-
     //Send adjacency matrix to the solver function
     cout << "\nRunning Branch-and-Bound...\n";
     TSPResult bbResult = solveTSP(adjMat);
-
-    //Stop timer
-    auto bbEnd = chrono::high_resolution_clock::now();
-
-    //Store duration and print results
-    bbResult.duration = chrono::duration_cast<chrono::microseconds>(bbEnd - bbStart);
     printResults(bbResult, "--- Branch and Bound Results ---");
 
-
-    //BRUTE FORCE
-    //Start timer
-    auto bfStart = chrono::high_resolution_clock::now();
 
     //Run Brute Force alg to verify correctness of b&b's solution
     cout << "\nRunning Brute Force...\n";
     TSPResult bfResult = solveTSPBruteForce(adjMat);
-
-    //Stop timer
-    auto bfEnd = chrono::high_resolution_clock::now();
-
-    //Store duration and print results
-    bfResult.duration = chrono::duration_cast<chrono::microseconds>(bfEnd - bfStart);
     printResults(bfResult, "--- Brute Force Results ---");
 }
+
+
+
+
+
 
 
 //Brute Force TSP Solver
 TSPResult solveTSPBruteForce(const vector<vector<double>>& adjMat) {
     int n = adjMat.size();
+
     vector<int> cities;
     for (int i = 1; i < n; i++) {
         cities.push_back(i);
     }
+
     double minLength = numeric_limits<double>::infinity();
     vector<int> bestPath;
+
     do {
         double currentCost = 0.0;
         int currentCity = 0;
+
         for (int i = 0; i < cities.size(); i++) {
             int nextCity = cities[i];
             currentCost += adjMat[currentCity][nextCity];
             currentCity = nextCity;
         }
+
         currentCost += adjMat[currentCity][0];
+
         if (currentCost < minLength) {
             minLength = currentCost;
             bestPath = cities;
         }
     } while (next_permutation(cities.begin(), cities.end()));
+
+
     return TSPResult{ minLength, bestPath };
 }
