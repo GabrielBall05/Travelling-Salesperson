@@ -8,6 +8,7 @@
 #include <random>
 #include <cmath>
 #include <numeric>
+#include <algorithm>
 
 using namespace std;
 
@@ -30,6 +31,14 @@ struct Node {
         return this->bound > other.bound;
     }
 };
+
+//Struct for the result of the TSP algorithm
+struct TSPResult {
+    double minLength;
+    vector<int> bestPath;
+};
+
+TSPResult solveTSPBruteForce(const vector<vector<double>>& adjMat); //For verifying B&B result
 
 //Generate n cities at random distances from each other 
 vector<City> generateCities(int n) {
@@ -118,7 +127,7 @@ double computeBound(const vector<vector<double>>& adjMat, const Node& curNode) {
 }
 
 //TSP Solver Main Algorithm
-void solveTSP(const vector<vector<double>>& adjMat) {
+TSPResult solveTSP(const vector<vector<double>>& adjMat) {
     int n = adjMat.size();
     double minLength = numeric_limits<double>::infinity();
     vector<int> bestPath;
@@ -180,9 +189,15 @@ void solveTSP(const vector<vector<double>>& adjMat) {
         }
     }
 
-    cout << "Minimum Cost: " << minLength << "\n";
+
+    return TSPResult{ minLength, bestPath };
+}
+
+void printResults(TSPResult result, string label) {
+    cout << label << "\n";
+    cout << "Minimum Cost: " << result.minLength << "\n";
     cout << "Best Path: ";
-    for (int city : bestPath)
+    for (int city : result.bestPath)
         cout << city << " -> ";
     cout << "0\n";
 }
@@ -197,7 +212,53 @@ int main() {
     vector<vector<double>> adjMat = generateAdjacencyMatrix(generateCities(n));
 
     //Send adjacency matrix to the solver function
-    solveTSP(adjMat);
+    cout << "\nRunning Branch-and-Bound...\n";
+    TSPResult bbResult = solveTSP(adjMat);
+    printResults(bbResult, "--- Branch and Bound Results ---");
 
 
+    //Run Brute Force alg to verify correctness of b&b's solution
+    cout << "\nRunning Brute Force...\n";
+    TSPResult bfResult = solveTSPBruteForce(adjMat);
+    printResults(bfResult, "--- Brute Force Results ---");
+}
+
+
+
+
+
+
+
+//Brute Force TSP Solver
+TSPResult solveTSPBruteForce(const vector<vector<double>>& adjMat) {
+    int n = adjMat.size();
+
+    vector<int> cities;
+    for (int i = 1; i < n; i++) {
+        cities.push_back(i);
+    }
+
+    double minLength = numeric_limits<double>::infinity();
+    vector<int> bestPath;
+
+    do {
+        double currentCost = 0.0;
+        int currentCity = 0;
+
+        for (int i = 0; i < cities.size(); i++) {
+            int nextCity = cities[i];
+            currentCost += adjMat[currentCity][nextCity];
+            currentCity = nextCity;
+        }
+
+        currentCost += adjMat[currentCity][0];
+
+        if (currentCost < minLength) {
+            minLength = currentCost;
+            bestPath = cities;
+        }
+    } while (next_permutation(cities.begin(), cities.end()));
+
+
+    return TSPResult{ minLength, bestPath };
 }
