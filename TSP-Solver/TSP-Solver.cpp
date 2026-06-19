@@ -7,6 +7,7 @@
 #include <queue>
 #include <random>
 #include <cmath>
+#include <numeric>
 
 using namespace std;
 
@@ -71,8 +72,12 @@ vector<vector<double>> generateAdjacencyMatrix(const vector<City>& cities) {
 }
 
 //Returns the bound for the given node
-double computeBound(const vector<vector<double>>& adjMat, int curCity, const vector<int>& unvisitedCities, double costSoFar) {
-    double estimatedCost = costSoFar; //Initialize to the cost so far
+//double computeBound(const vector<vector<double>>& adjMat, int curCity, const vector<int>& unvisitedCities, double costSoFar) {
+double computeBound(const vector<vector<double>>& adjMat, const Node& curNode) {
+    double estimatedCost = curNode.curCost; //Initialize to the cost so far
+
+    const vector<int>& unvisitedCities = curNode.unvisitedCities;
+    int curCity = curNode.curPath.back();
 
     double minEdge = numeric_limits<double>::infinity();
     if (unvisitedCities.size() == 0) { //If all cities are visited, go back to city 0
@@ -82,7 +87,8 @@ double computeBound(const vector<vector<double>>& adjMat, int curCity, const vec
         //Find the minimum outgoing edge from curCity to the unvisited cities
         for (int i = 0; i < unvisitedCities.size(); i++) {
             double distance = adjMat[curCity][unvisitedCities[i]];
-            if (distance < minEdge) minEdge = distance;
+            if (distance < minEdge)
+                minEdge = distance;
         }
     }
     //Add curCity's minimum outgoing edge to bound
@@ -97,7 +103,8 @@ double computeBound(const vector<vector<double>>& adjMat, int curCity, const vec
             if (cityId == unvisitedCities[i]) continue;
 
             double distance = adjMat[cityId][unvisitedCities[i]];
-            if (distance < minEdge) minEdge = distance;
+            if (distance < minEdge)
+                minEdge = distance;
         }
         //Also check distance from this unvisited city to the starting city (0)
         if (adjMat[cityId][0] < minEdge) minEdge = adjMat[cityId][0];
@@ -112,12 +119,77 @@ double computeBound(const vector<vector<double>>& adjMat, int curCity, const vec
 
 //TSP Solver Main Algorithm
 void solveTSP(const vector<vector<double>>& adjMat) {
+    int n = adjMat.size();
+    double minLength = numeric_limits<double>::infinity();
+    vector<int> bestPath;
+    priority_queue<Node> pq;
     
+    //Set up root node with current path: {0}, unvisitiedCities: {1...n-1}, current cost: 0, bound: computeBound() return value
+    Node root{};
+    root.curPath = { 0 };
+    root.unvisitedCities.reserve(n - 1);
+    for (int i = 1; i < n; i++) root.unvisitedCities.push_back(i);
+    root.curCost = 0.0;
+    root.bound = computeBound(adjMat, root);
+    
+    //Push root into pq
+    pq.push(root);
+
+    //Branch-and-Bound loop - stops only when priority queue is empty
+    while (!pq.empty()) {
+        //Get the node with the lowest bound
+        Node curNode = pq.top();
+        pq.pop();
+
+        //Skip if this node's bound is >= minLength
+        if (curNode.bound >= minLength) continue;
+
+        //If it's a leaf node and its bound is < minLength, update current best solution and continue
+        if (curNode.unvisitedCities.empty() && curNode.bound < minLength) {
+            minLength = curNode.bound;
+            bestPath = curNode.curPath;
+            continue;
+        }
+
+        //Expand curNode by creating child nodes for each unvisited reachable city from curNode
+        for (int i = 0; i < curNode.unvisitedCities.size(); i++) {
+            int nextCity = curNode.unvisitedCities[i];
+
+            //Create a child node for curNode
+            Node child{};
+            
+            //Set child's current path to be the parent's path + this destination
+            child.curPath = curNode.curPath;
+            child.curPath.push_back(nextCity);
+
+            //Set child's unvisited cities list to be the parent's list - this destination
+            child.unvisitedCities = curNode.unvisitedCities;
+            auto it = find(child.unvisitedCities.begin(), child.unvisitedCities.end(), nextCity);
+            if (it != child.unvisitedCities.end())
+                child.unvisitedCities.erase(it);
+
+            //Set child's current cost to parent's cost + cost to get here (from adjacency matrix)
+            child.curCost = curNode.curCost + adjMat[curNode.curPath.back()][nextCity];
+
+            //Set child's bound
+            child.bound = computeBound(adjMat, child);
+
+            //Only add this child to pq if its bound is < minLength
+            if (child.bound < minLength)
+                pq.push(child);
+        }
+    }
+
+    cout << "Minimum Cost: " << minLength << "\n";
+    cout << "Best Path: ";
+    for (int city : bestPath)
+        cout << city << " -> ";
+    cout << "0\n";
 }
 
 int main() {
     //Get n from user
-    cout << "Number of vertices/cities:";
+    cout << "Number of vertices/cities: ";
     int n;
     cin >> n;
 
